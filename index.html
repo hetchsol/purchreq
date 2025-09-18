@@ -1,0 +1,963 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Purchase Requisition Management App</title>
+
+<!-- Preserve existing headings/labels and overall structure while enhancing functionality -->
+<style>
+  :root{
+    --bg:#0f172a; --panel:#111827; --muted:#1f2937; --soft:#374151; --text:#e5e7eb;
+    --accent:#22c55e; --accent-2:#60a5fa; --warn:#f59e0b; --danger:#ef4444; --ok:#10b981;
+    --shadow:0 6px 18px rgba(0,0,0,.25);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,'Noto Sans',sans-serif}
+  header{position:sticky;top:0;z-index:50;background:linear-gradient(90deg,#0b1222,#0f172a);border-bottom:1px solid #213555;padding:12px 16px; box-shadow:var(--shadow);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+  header .title{font-weight:700; letter-spacing:.3px}
+  header .title small{display:block;font-weight:500;color:#93c5fd}
+  .role-select{display:flex;align-items:center;gap:8px}
+  .role-select select{background:var(--muted); color:var(--text); border:1px solid #2b3a55; border-radius:8px; padding:8px 10px}
+  nav{display:flex; gap:8px; flex-wrap:wrap;padding:12px 16px; border-bottom:1px solid #1f2d44; background:linear-gradient(180deg,#0f172a,#0a1224)}
+  .tab-btn{background:var(--muted); color:var(--text); border:1px solid #24334f; border-radius:8px; padding:8px 12px; cursor:pointer}
+  .tab-btn.active{background:#1e293b; border-color:#334155}
+  main{padding:16px; max-width:1200px; margin:0 auto}
+  section{display:none}
+  section.active{display:block}
+  h1,h2,h3,h4{margin:0 0 12px}
+  h1{font-size:1.4rem} h2{font-size:1.2rem} h3{font-size:1.05rem}
+  .panel{background:var(--panel); border:1px solid #202b44; border-radius:12px; padding:16px; box-shadow:var(--shadow); margin-bottom:16px}
+  .grid{display:grid; gap:12px}
+  .g-2{grid-template-columns:repeat(2,1fr)}
+  .g-3{grid-template-columns:repeat(3,1fr)}
+  .g-4{grid-template-columns:repeat(4,1fr)}
+  @media (max-width: 900px){ .g-4{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width: 680px){ .g-2,.g-3,.g-4{grid-template-columns:1fr} }
+  label{font-weight:600; font-size:.9rem}
+  input, select, textarea{width:100%; background:#0b1222; color:var(--text);border:1px solid #2b3a55; border-radius:8px; padding:10px; outline:none}
+  input[readonly], select[disabled]{opacity:.8; background:#0d1530}
+  textarea{min-height:90px; resize:vertical}
+  .btn{display:inline-flex; align-items:center; gap:8px; cursor:pointer;background:var(--soft); color:var(--text); border:1px solid #2b3a55; border-radius:10px; padding:10px 14px; font-weight:600}
+  .btn.primary{background:var(--accent); color:#073b22; border-color:#1faa62}
+  .btn.info{background:var(--accent-2); color:#05152e; border-color:#3b82f6}
+  .btn.warn{background:var(--warn); color:#271b00; border-color:#c98a0c}
+  .btn.danger{background:var(--danger); color:#2a0606; border-color:#b91c1c}
+  .btn.ghost{background:transparent; border-color:#2b3a55}
+  .btn:disabled{opacity:.5; cursor:not-allowed}
+  .actions{display:flex; gap:8px; flex-wrap:wrap}
+  table{width:100%; border-collapse:separate; border-spacing:0; overflow:hidden; border-radius:12px; border:1px solid #1e2a44}
+  th,td{padding:10px 12px; border-bottom:1px solid #1e2a44; vertical-align:top}
+  thead th{background:#0f1b35; text-align:left}
+  tbody tr:nth-child(even){background:#0b1428}
+  .tag{display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:.8rem; border:1px solid #294063}
+  .tag.low{background:#0b2b1f; color:#86efac; border-color:#14532d}
+  .tag.medium{background:#2a1b05; color:#fcd34d; border-color:#854d0e}
+  .tag.high{background:#2a0a0a; color:#fca5a5; border-color:#7f1d1d}
+  .status{font-weight:700}
+  .status.pending{color:#f59e0b}
+  .status.approved{color:#10b981}
+  .status.declined{color:#ef4444}
+  .right{display:flex; gap:8px; justify-content:flex-end}
+  .total-line{display:flex; justify-content:flex-end; gap:12px; margin-top:8px}
+  .muted{color:#93a4c1; font-size:.9rem}
+  .divider{height:1px; background:#213555; margin:12px 0}
+  .hidden{display:none !important}
+  .toast{position:fixed; right:16px; bottom:16px; display:flex; flex-direction:column; gap:8px; z-index:9999}
+  .toast .msg{background:#0b1428; border:1px solid #294063; padding:10px 12px; border-radius:10px; box-shadow:var(--shadow)}
+  .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.5); display:none; align-items:center; justify-content:center; z-index:1000}
+  .modal{background:var(--panel); border:1px solid #203050; border-radius:12px; max-width:780px; width:95%; padding:16px; box-shadow:var(--shadow)}
+  .kbd{padding:.15rem .4rem; border:1px solid #2b3a55; border-radius:6px; background:#0b1428}
+  details.settings summary{cursor:pointer; font-weight:700}
+  details.settings{border:1px dashed #32486b; border-radius:10px; padding:8px}
+</style>
+
+<!-- PDF generation libs (client-side) -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<script>
+  (function() {
+    const requiredPin = "8888";
+    const storedPin = sessionStorage.getItem("pin");
+
+    if (storedPin !== requiredPin) {
+      let userPin = prompt("Enter PIN to access the app:");
+      if (userPin !== requiredPin) {
+        alert("Incorrect PIN. Access denied.");
+        window.location.reload();
+      } else {
+        sessionStorage.setItem("pin", userPin);
+      }
+    }
+  })();
+</script>
+
+</head>
+
+<body>
+<header>
+<style>
+  .title {
+    text-align: center;
+  }
+<style>
+  body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center; /* horizontal centering */
+    align-items: center;     /* vertical centering */
+    background-color: #f9f9f9; /* optional background */
+  }
+
+  .title {
+    text-align: center;
+  }
+</style>
+
+<div class="title">
+  <div style="font-size:1.1rem">Purchase Requisition App</div>
+  <small>Purchase Requisition Management App</small>
+</div>  
+
+<!--<div class="title">
+    <div style="font-size:1.1rem">Purchase Requisition App</div>
+    <small>Purchase Requisition Management App</small>
+  </div>-->
+  <div class="role-select">
+    <label for="currentRole">Role:</label>
+    <select id="currentRole" title="Set your current role to enable the correct approval actions">
+      <option>Initiator</option>
+      <option>HOD</option>
+      <option>Finance</option>
+      <option>MD</option>
+      <option>Admin</option>
+    </select>
+  </div>
+</header>
+
+<nav>
+  <button class="tab-btn active" data-tab="new-req">New Requisition</button>
+   <button class="tab-btn" data-tab="processed">Processed Reqs</button>
+  <button class="tab-btn" data-tab="pending">Pending Approvals</button>
+  <button class="tab-btn" data-tab="admin">Admin Console</button>
+</nav>
+
+<main>
+  <!-- New Requisition (preserve label) -->
+  <section id="new-req" class="active">
+    <h2>New Requisition</h2>
+    <div class="panel">
+      <div class="grid g-4">
+        <div>
+          <label for="initiator">Initiator</label>
+          <select id="initiator"></select>
+          <!--<div class="muted">Auto-fills Department, HOD, and Account Code</div>-->
+        </div>
+        <div>
+          <label for="reqDate">Date</label>
+          <input type="date" id="reqDate" />
+        </div>
+        <div>
+          <label for="department">Department</label>
+          <select id="department">
+            <option value="">-- Select --</option>
+            <option>Sales</option>
+            <option>Finance</option>
+            <option>Engineering</option>
+            <option>IT</option>
+            <option>HR</option>
+            <option>Admin</option>
+          </select>
+        </div>
+        <div>
+          <label for="accountCode">Account Code</label>
+          <input id="accountCode" placeholder="Auto from matrix" />
+          <!--<div class="muted">Examples: SLM001, FIN002, ENG003, STR004, ADM004, LSK005</div>-->
+        </div>
+        <div>
+          <label for="urgency">Urgency</label>
+          <select id="urgency">
+            <option>Low</option>
+            <option>Medium</option>
+            <option>High</option>
+          </select>
+        </div>
+        <div>
+          <label for="prNumber">PR Number</label>
+          <input id="prNumber" readonly />
+          <!--<div class="muted">Pattern controlled in Admin → Settings</div>-->
+        </div>
+        <div>
+          <label for="hod">HOD</label>
+          <input id="hod" placeholder="Auto from matrix" />
+        </div>
+        <div>
+          <label for="vendor">Suggested Vendor</label>
+          <input list="vendors" id="vendor" placeholder="Start typing..." />
+          <datalist id="vendors">
+		<option value="Bearing Man Goup (BMG)"></option>
+		<option value="BOLLORE Logistics"></option>
+		<option value="BUILDERS WAREHOUSE INTERNATIONAL"></option>
+		<option value="BULK MACHINERY SOLUTION"></option>
+		<option value="CAMCO Equipment (Z) Limited)"></option>
+		<option value="Champion Brothers"></option>
+		<option value="City Graphics Ltd"></option>
+		<option value="Computer King"></option>
+		<option value="Cozan Consulting CC"></option>
+		<option value="BOLLORE Logistics"></option>
+		<option value="X Damru Enterprises Limited"></option>
+		<option value="ECO Petroleum Ltd"></option>
+		<option value="EVEREST PAINTS)"></option>
+		<option value="Face Investment SARL"></option>
+		<option value="Game Stores Zambiad"></option>
+		<option value="GUARDIAN MOTORS"></option>
+		<option value="Horn Afric Oryx"></option>
+		<option value="JJ ERASMUS - Mapalo"></option>
+		<option value="Kanyanga Service Station"></option>
+		<option value="Lake Petroleum Ltd"></option>
+		<option value="Makro SA"></option>
+		<option value="Microsoft"></option>
+		<option value="MIST GARDENS"></option>
+		<option value="Mount Meru (Z) Ltd"></option>
+		<option value="Musapas Farm Ltd"></option>
+		<option value="Neelkanth Filling Station"></option>
+		<option value="Omnilyne Zambia Ltd"></option>
+		<option value="Oryx Energies"></option>
+		<option value="Palian Pty Ltd"></option>
+		<option value="PETCOM ZAMBIA LTD"></option>
+		<option value="Petroda"></option>
+		<option value="PICK N PAY"></option>
+          </datalist>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h3>Items</h3>
+      <div class="panel" style="padding:0">
+        <table id="itemsTable">
+          <thead>
+            <tr>
+              <th style="width:100px">Item ID</th>
+              <th>Description</th>
+              <th style="width:120px">Quantity</th>
+              <th style="width:150px">Unit of Measure</th>
+              <th style="width:170px">Estimated Unit Price (ZMW)</th>
+              <th style="width:170px">Estimated Total Price (ZMW)</th>
+              <th style="width:80px">—</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div class="right" style="padding:12px">
+          <button class="btn ghost" id="addItemBtn">+ Add Item</button>
+        </div>
+      </div>
+
+      <div class="total-line">
+        <div class="muted">Subtotal:</div>
+        <div id="subtotalZMW">ZMW 0.00</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <details class="settings">
+        <summary>Additional Fields (optional)</summary>
+        <div class="grid g-4" style="margin-top:8px">
+          <div class="optField costCenter hidden">
+            <label for="costCenter">Cost Center</label>
+            <input id="costCenter" placeholder="e.g., CC-ENG-01" />
+          </div>
+          <div class="optField projectCode hidden">
+            <label for="projectCode">Project Code</label>
+            <input id="projectCode" placeholder="e.g., PRJ-2025-01" />
+          </div>
+          <div class="optField deliveryLocation hidden">
+            <label for="deliveryLocation">Delivery Location</label>
+            <input id="deliveryLocation" placeholder="e.g., Kitwe Main" />
+          </div>
+          <div class="optField paymentTerms hidden">
+            <label for="paymentTerms">Payment Terms</label>
+            <input id="paymentTerms" placeholder="e.g., 30 days EOM" />
+          </div>
+        </div>
+      </details>
+
+      <div class="divider"></div>
+
+      <div>
+        <label for="justification">Justification</label>
+        <textarea id="justification" placeholder="Provide business justification..."></textarea>
+      </div>
+
+      <div class="right">
+        <button class="btn" id="saveDraftBtn">💾 Save Draft</button>
+        <button class="btn info" id="loadDraftBtn">📂 Load Draft</button>
+        <button class="btn primary" id="submitBtn">🚀 Submit Requisition</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pending Approvals -->
+  <section id="pending">
+    <h2>Pending Approvals</h2>
+    <div class="panel">
+      <table id="pendingTable">
+        <thead>
+          <tr>
+            <th>PR Number</th>
+            <th>Initiator</th>
+            <th>Department</th>
+            <th>Cost</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Processed Requisitions -->
+  <section id="processed">
+    <h2>Processed Requisitions</h2>
+    <div class="panel">
+      <table id="processedTable">
+        <thead>
+          <tr>
+            <th>PR Number</th>
+            <th>Initiator</th>
+            <th>Department</th>
+            <th>Cost</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Admin Console -->
+  <section id="admin">
+    <h2>Admin Console</h2>
+    <div class="panel" id="adminLockPanel">
+      <div class="grid g-3">
+        <div>
+          <label for="adminPin">Enter PIN</label>
+          <input id="adminPin" type="password" placeholder="••••" inputmode="numeric" />
+        </div>
+        <div style="display:flex; align-items:end">
+          <button class="btn primary" id="unlockBtn">Unlock</button>
+        </div>
+        <div class="muted" style="display:flex; align-items:end">Hint: default PIN <span class="kbd">***5</span></div>
+      </div>
+    </div>
+
+    <div id="adminContent" class="hidden">
+      <div class="panel">
+        <h3>Edit Initiator Matrix</h3>
+        <table id="matrixTable">
+          <thead>
+            <tr>
+              <th>Initiator</th>
+              <th>HOD</th>
+              <th>Department</th>
+              <th>Account Code</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <h4 style="margin-top:12px">Add New Mapping</h4>
+        <div class="grid g-4">
+          <div><label>Initiator</label><input id="newInitr"></div>
+          <div><label>HOD</label><input id="newHod"></div>
+          <div><label>Department</label>
+            <select id="newDept">
+              <option>Sales</option><option>Finance</option><option>Engineering</option>
+              <option>IT</option><option>HR</option><option>Admin</option>
+            </select>
+          </div>
+          <div><label>Account Code</label><input id="newAcc"></div>
+        </div>
+        <div class="right" style="margin-top:8px">
+          <button class="btn" id="addMappingBtn">Add Mapping</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Approval Workflow</h3>
+        <div class="grid g-3">
+          <div>HOD Approval: <span class="tag">Approve</span> <span class="tag">Decline</span></div>
+          <div>Finance Approval: <span class="tag">Approve</span> <span class="tag">Decline</span></div>
+          <div>MD Approval: <span class="tag">Approve</span> <span class="tag">Decline</span></div>
+        </div>
+        <div class="muted" style="margin-top:8px">
+          Sequential workflow (HOD → Finance → MD). Actions are enabled based on current <b>Role</b>.
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Settings (Company Standards)</h3>
+        <details class="settings" open>
+          <summary>PR Number & General</summary>
+          <div class="grid g-4" style="margin-top:8px">
+            <div><label>Company Code</label><input id="setCompanyCode" placeholder="e.g., KSB"/></div>
+            <div><label>Currency Code</label><input id="setCurrency" placeholder="ZMW"/></div>
+            <div><label>PR Pattern</label><input id="setPRPattern" placeholder="KSB-{DEPT}-{YYYY}{MM}-{SEQ4}"/></div>
+            <div>
+              <label>Sequence Reset</label>
+              <select id="setSeqReset"><option value="monthly">Monthly</option><option value="annual">Annual</option><option value="never">Never</option></select>
+            </div>
+            <div>
+              <label>Fiscal Year Start Month</label>
+              <select id="setFYStart">
+                <option value="1">January</option><option value="2">February</option><option value="3">March</option>
+                <option value="4">April</option><option value="5">May</option><option value="6">June</option>
+                <option value="7">July</option><option value="8">August</option><option value="9">September</option>
+                <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+              </select>
+            </div>
+          </div>
+          <div class="muted" style="margin-top:8px">Tokens: {COMP}, {DEPT}, {YYYY}, {YY}, {MM}, {SEQ2..SEQ5}. Dept codes map configured below.</div>
+          <div class="right" style="margin-top:8px"><button class="btn" id="saveSettingsBtn">Save Settings</button></div>
+        </details>
+        <details class="settings">
+          <summary>Department Codes & Budgets</summary>
+          <div class="grid g-2" style="margin-top:8px">
+            <div>
+              <h4>Department Codes</h4>
+              <table id="deptCodesTable">
+                <thead><tr><th>Department</th><th>Code</th><th>Actions</th></tr></thead>
+                <tbody></tbody>
+              </table>
+              <div class="grid g-3" style="margin-top:8px">
+                <div><select id="dcDept"><option>Sales</option><option>Finance</option><option>Engineering</option><option>IT</option><option>HR</option><option>Admin</option></select></div>
+                <div><input id="dcCode" placeholder="e.g., ENG"/></div>
+                <div><button class="btn" id="addDeptCodeBtn">Add/Update</button></div>
+              </div>
+            </div>
+            <div>
+              <h4>Monthly Budgets</h4>
+              <table id="budgetsTable">
+                <thead><tr><th>Department</th><th>Monthly Budget</th><th>Actions</th></tr></thead>
+                <tbody></tbody>
+              </table>
+              <div class="grid g-3" style="margin-top:8px">
+                <div><select id="bdDept"><option>Sales</option><option>Finance</option><option>Engineering</option><option>IT</option><option>HR</option><option>Admin</option></select></div>
+                <div><input id="bdAmt" type="number" min="0" step="0.01" placeholder="ZMW"/></div>
+                <div><button class="btn" id="addBudgetBtn">Add/Update</button></div>
+              </div>
+              <div class="muted" style="margin-top:8px">Finance approvals are blocked if a PR exceeds the remaining monthly budget of its Department.</div>
+            </div>
+          </div>
+        </details>
+        <details class="settings">
+          <summary>Optional Fields</summary>
+          <div class="grid g-4" style="margin-top:8px">
+            <label><input type="checkbox" id="optCostCenter"/> Cost Center</label>
+            <label><input type="checkbox" id="optProjectCode"/> Project Code</label>
+            <label><input type="checkbox" id="optDeliveryLocation"/> Delivery Location</label>
+            <label><input type="checkbox" id="optPaymentTerms"/> Payment Terms</label>
+          </div>
+          <div class="right" style="margin-top:8px"><button class="btn" id="saveOptionsBtn">Save Options</button></div>
+        </details>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- View Modal for PR details -->
+<div class="modal-backdrop" id="viewModalBackdrop" aria-hidden="true">
+  <div class="modal">
+    <div style="display:flex; justify-content:space-between; align-items:center">
+      <h3 id="modalTitle">Requisition</h3>
+      <button class="btn ghost" id="closeModalBtn">✖</button>
+    </div>
+    <div id="modalBody" style="margin-top:8px; max-height:60vh; overflow:auto"></div>
+    <div class="right" style="margin-top:12px">
+      <button class="btn info" id="modalPdfBtn">⬇️ Download PDF</button>
+      <button class="btn" id="modalShareBtn">📤 Share</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== Local Storage Keys =====
+const ADMIN_PIN = '4425';
+const LS_KEYS = {
+  MATRIX: 'pr_matrix',
+  REQS: 'pr_records',
+  DRAFTS: 'pr_drafts',
+  COUNTERS: 'pr_counters', // keyed by reset period
+  SETTINGS: 'pr_settings',
+  DEPT_CODES: 'pr_dept_codes',
+  BUDGETS: 'pr_budgets', // monthly budget per department (currency in settings)
+  OPTIONS: 'pr_options'
+};
+
+// ===== Defaults =====
+const DEFAULT_MATRIX = [
+  { initiator: 'Chabala, John', hod: 'Munthali, Joe', department: 'Engineering', accountCode: 'ENG003' },
+  { initiator: 'Kaluya, Justine', hod: 'Munthali, Joe', department: 'Engineering', accountCode: 'ENG003' },
+  { initiator: 'Nanyangwe, Annie', hod: 'Banda, Anne', department: 'Finance', accountCode: 'FIN002' },
+  { initiator: 'Nguni, Nashon', hod: 'Banda, Anne', department: 'Finance', accountCode: 'FIN002' },
+  { initiator: 'Chishimba, Waden', hod: 'Shebele, Moses', department: 'Sales', accountCode: 'SLM001' },
+  { initiator: 'Zimba, Lina', hod: 'Shebele, Moses', department: 'Sales', accountCode: 'SLM001' },
+];
+const DEFAULT_SETTINGS = {
+  companyCode: 'KSB',
+  currency: 'ZMW',
+  prPattern: 'KSB-{DEPT}-{YYYY}{MM}-{SEQ4}',
+  seqReset: 'monthly', // monthly|annual|never
+  fyStartMonth: 1
+};
+const DEFAULT_DEPT_CODES = {
+  'Sales': 'SL', 'Finance': 'FIN', 'Engineering': 'ENG', 'IT': 'IT', 'HR': 'HR', 'Admin': 'ADM'
+};
+const DEFAULT_BUDGETS = {
+  'Sales': 150000, 'Finance': 80000, 'Engineering': 250000, 'IT': 120000, 'HR': 60000, 'Admin': 90000
+};
+const DEFAULT_OPTIONS = { costCenter:false, projectCode:false, deliveryLocation:false, paymentTerms:false };
+
+// ===== Helpers =====
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+function loadLS(key, fallback){ try{ const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; }catch{ return fallback; } }
+function saveLS(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function toMoney(n){ const cur = SETTINGS.currency || 'ZMW'; return cur+' '+(Number(n||0).toFixed(2)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+function monthKeyForDate(d){ const dt = new Date(d); return dt.getFullYear().toString()+String(dt.getMonth()+1).padStart(2,'0'); }
+function yearKeyForDate(d, fyStart){ const dt = new Date(d); const m = dt.getMonth()+1; let y = dt.getFullYear(); if(m < fyStart){ y = y - 1; } return String(y); }
+function uid(){ return Math.random().toString(36).slice(2,9); }
+function toast(msg){ const t=$('#toast'); const div=document.createElement('div'); div.className='msg'; div.textContent=msg; t.appendChild(div); setTimeout(()=>div.remove(), 3800); if(window.Notification && Notification.permission==='granted'){ try{ new Notification('Purchase Requisition', { body: msg }); }catch(e){} } }
+
+// ===== State =====
+let MATRIX = loadLS(LS_KEYS.MATRIX, DEFAULT_MATRIX);
+let REQS = loadLS(LS_KEYS.REQS, []);
+let DRAFTS = loadLS(LS_KEYS.DRAFTS, []);
+let SETTINGS = loadLS(LS_KEYS.SETTINGS, DEFAULT_SETTINGS);
+let DEPT_CODES = loadLS(LS_KEYS.DEPT_CODES, DEFAULT_DEPT_CODES);
+let BUDGETS = loadLS(LS_KEYS.BUDGETS, DEFAULT_BUDGETS);
+let OPTIONS = loadLS(LS_KEYS.OPTIONS, DEFAULT_OPTIONS);
+let COUNTERS = loadLS(LS_KEYS.COUNTERS, {});
+let ADMIN_UNLOCKED = false;
+
+// ===== PR Number Generation (pattern-based) =====
+function seqScopeKey(dateStr){
+  const reset = SETTINGS.seqReset || 'monthly';
+  if(reset==='never') return 'ALL';
+  if(reset==='annual') return 'FY'+yearKeyForDate(dateStr || new Date(), SETTINGS.fyStartMonth||1);
+  return monthKeyForDate(dateStr || new Date());
+}
+function nextPRNumber(){
+  const dateStr = $('#reqDate').value || todayISO();
+  const scope = seqScopeKey(dateStr);
+  COUNTERS[scope] = (COUNTERS[scope] || 0) + 1;
+  saveLS(LS_KEYS.COUNTERS, COUNTERS);
+  return formatPRNumber(COUNTERS[scope], dateStr);
+}
+function formatPRNumber(seq, dateStr){
+  const d = new Date(dateStr || new Date());
+  const tokens = {
+    '{COMP}': SETTINGS.companyCode || 'KSB',
+    '{DEPT}': DEPT_CODES[$('#department').value] || 'GEN',
+    '{YYYY}': String(d.getFullYear()),
+    '{YY}': String(d.getFullYear()).slice(-2),
+    '{MM}': String(d.getMonth()+1).padStart(2,'0'),
+    '{SEQ2}': String(seq).padStart(2,'0'),
+    '{SEQ3}': String(seq).padStart(3,'0'),
+    '{SEQ4}': String(seq).padStart(4,'0'),
+    '{SEQ5}': String(seq).padStart(5,'0')
+  };
+  let pat = (SETTINGS.prPattern || 'KSB-{DEPT}-{YYYY}{MM}-{SEQ4}');
+  Object.entries(tokens).forEach(([k,v])=>{ pat = pat.replaceAll(k, v); });
+  return pat;
+}
+
+function stageLabel(appr){ if(appr.hod==='pending') return 'HOD'; if(appr.finance==='pending' && appr.hod==='approved') return 'Finance'; if(appr.md==='pending' && appr.finance==='approved') return 'MD'; return null; }
+function overallStatus(appr){ if(['declined'].includes(appr.hod)||['declined'].includes(appr.finance)||['declined'].includes(appr.md)) return 'declined'; if(appr.hod==='approved'&&appr.finance==='approved'&&appr.md==='approved') return 'approved'; return 'pending'; }
+
+// ===== Budget Calculations =====
+function monthlyBudget(dept){ return Number(BUDGETS[dept]||0); }
+function usedBudgetFor(dept, dateStr){
+  const mk = monthKeyForDate(dateStr);
+  return REQS.filter(r=> r.department===dept && monthKeyForDate(r.date)===mk && r.approvals.finance==='approved' && overallStatus(r.approvals)!=='declined')
+             .reduce((s,r)=> s + Number(r.subtotal||0), 0);
+}
+function remainingBudgetFor(dept, dateStr){ return monthlyBudget(dept) - usedBudgetFor(dept, dateStr); }
+
+// ===== Init & UI Wiring =====
+function populateInitiators(){ const initrSel=$('#initiator'); initrSel.innerHTML=''; MATRIX.map(m=>m.initiator).sort((a,b)=>a.localeCompare(b)).forEach(name=>{ const opt=document.createElement('option'); opt.value=name; opt.textContent=name; initrSel.appendChild(opt); }); }
+function applyMatrixForInitiator(){ const name=$('#initiator').value; const row=MATRIX.find(m=>m.initiator===name); if(row){ $('#department').value=row.department||''; $('#accountCode').value=row.accountCode||''; $('#hod').value=row.hod||''; } updatePRNumberPreview(); }
+function updatePRNumberPreview(){ $('#prNumber').value = nextPRNumber(); }
+function resetNewForm(){ $('#reqDate').value=todayISO(); $('#urgency').value='Low'; $('#vendor').value=''; $('#justification').value=''; $('#costCenter').value=''; $('#projectCode').value=''; $('#deliveryLocation').value=''; $('#paymentTerms').value=''; const tb=$('#itemsTable tbody'); tb.innerHTML=''; addItemRow(); updateTotals(); updatePRNumberPreview(); }
+
+function addItemRow(item={}){
+  const tr=document.createElement('tr');
+  tr.innerHTML = `
+    <td><input value="${item.itemId||''}" placeholder="e.g., ITM-001"/></td>
+    <td><input value="${item.desc||''}" placeholder="Describe item..."/></td>
+    <td><input type="number" min="0" step="1" value="${item.qty||''}" placeholder="0"/></td>
+    <td><input value="${item.uom||''}" placeholder="e.g., Each"/></td>
+    <td><input type="number" min="0" step="0.01" value="${item.unitPrice||''}" placeholder="0.00"/></td>
+    <td><input type="number" min="0" step="0.01" value="${item.total||''}" placeholder="0.00" readonly/></td>
+    <td><button class="btn danger remove-row">🗑</button></td>`;
+  $('#itemsTable tbody').appendChild(tr);
+  const [, , qtyI, , upI, totI] = tr.querySelectorAll('input');
+  function recalc(){ const q=parseFloat(qtyI.value||0); const p=parseFloat(upI.value||0); const t=q*p; totI.value=t.toFixed(2); updateTotals(); }
+  qtyI.addEventListener('input', recalc); upI.addEventListener('input', recalc);
+  tr.querySelector('.remove-row').addEventListener('click', ()=>{ tr.remove(); updateTotals(); });
+}
+function gatherItems(){ const rows=Array.from($('#itemsTable tbody').rows); return rows.map(r=>{ const ins=r.querySelectorAll('input'); return { itemId: ins[0].value.trim(), desc: ins[1].value.trim(), qty: Number(ins[2].value||0), uom: ins[3].value.trim(), unitPrice: Number(ins[4].value||0), total: Number(ins[5].value||0)}; }).filter(x=>x.desc || x.qty || x.unitPrice); }
+function updateTotals(){ const items=gatherItems(); const subtotal=items.reduce((s,it)=>s+(Number(it.total)||0),0); $('#subtotalZMW').textContent = toMoney(subtotal); return subtotal; }
+function buildReqFromForm(status='pending'){
+  const items=gatherItems();
+  const req = {
+    id: $('#prNumber').value,
+    initiator: $('#initiator').value,
+    date: $('#reqDate').value,
+    department: $('#department').value,
+    accountCode: $('#accountCode').value,
+    urgency: $('#urgency').value.toLowerCase(),
+    hod: $('#hod').value,
+    vendor: $('#vendor').value,
+    opt: {
+      costCenter: $('#costCenter').value || undefined,
+      projectCode: $('#projectCode').value || undefined,
+      deliveryLocation: $('#deliveryLocation').value || undefined,
+      paymentTerms: $('#paymentTerms').value || undefined,
+    },
+    items,
+    justification: $('#justification').value.trim(),
+    subtotal: updateTotals(),
+    approvals: { hod:'pending', finance:'pending', md:'pending' },
+    status,
+    history: [{ at: new Date().toISOString(), by: $('#initiator').value, event: 'created' }]
+  };
+  return req;
+}
+function validateReq(req){ const errs=[]; if(!req.initiator) errs.push('Initiator is required.'); if(!req.department) errs.push('Department is required.'); if(!req.accountCode) errs.push('Account Code is required.'); if(!req.hod) errs.push('HOD is required.'); if(!req.date) errs.push('Date is required.'); if(!req.items.length) errs.push('At least one item is required.'); const hasBad=req.items.some(it=>!(it.desc && it.qty>0 && it.unitPrice>=0)); if(hasBad) errs.push('Each item needs Description, Quantity (>0), and Unit Price (≥0).'); return errs; }
+
+// ===== Render Tables =====
+function renderPending(){ const tb=$('#pendingTable tbody'); tb.innerHTML=''; const pending = REQS.filter(r=> overallStatus(r.approvals)==='pending' && r.status!=='draft'); if(!pending.length){ tb.innerHTML = `<tr><td colspan="6" class="muted">No pending requisitions.</td></tr>`; return; } const role=$('#currentRole').value; pending.forEach(r=>{ const stage=stageLabel(r.approvals); const canAct = (role===stage) || (role==='Admin'); const tr=document.createElement('tr'); tr.innerHTML = `
+      <td>${r.id}</td>
+      <td>${r.initiator}</td>
+      <td>${r.department}</td>
+      <td>${toMoney(r.subtotal)}</td>
+      <td><span class="status pending">Pending (${stage||'—'})</span> <span class="tag ${r.urgency}">${r.urgency}</span></td>
+      <td class="actions">
+        <button class="btn ok" data-approve="${r.id}" ${canAct?'':'disabled'}>✅ Approve</button>
+        <button class="btn danger" data-decline="${r.id}" ${canAct?'':'disabled'}>⛔ Decline</button>
+		<button class="btn" data-view="${r.id}">👁 View</button>
+        <button class="btn info" data-pdf="${r.id}">⬇️ PDF</button>
+      </td>`;
+    tb.appendChild(tr); }); }
+
+function renderProcessed(){ const tb=$('#processedTable tbody'); tb.innerHTML=''; const processed = REQS.filter(r=> ['approved','declined'].includes(overallStatus(r.approvals)) && r.status!=='draft'); if(!processed.length){ tb.innerHTML = `<tr><td colspan="6" class="muted">No processed requisitions.</td></tr>`; return; } processed.forEach(r=>{ const st=overallStatus(r.approvals); const tr=document.createElement('tr'); tr.innerHTML = `
+      <td>${r.id}</td>
+      <td>${r.initiator}</td>
+      <td>${r.department}</td>
+      <td>${toMoney(r.subtotal)}</td>
+      <td><span class="status ${st}">${st.toUpperCase()}</span> <span class="tag ${r.urgency}">${r.urgency}</span></td>
+      <td class="actions">
+        <button class="btn" data-view="${r.id}">👁 View</button>
+        <button class="btn info" data-pdf="${r.id}">⬇️ PDF</button>
+      </td>`; tb.appendChild(tr); }); }
+
+// ===== Admin Rendering =====
+function syncAdminState(){ $('#adminContent').classList.toggle('hidden', !ADMIN_UNLOCKED); $('#adminLockPanel').classList.toggle('hidden', ADMIN_UNLOCKED); if(ADMIN_UNLOCKED){ renderMatrix(); renderDeptCodes(); renderBudgets(); loadSettingsIntoUI(); loadOptionsIntoUI(); } }
+function renderMatrix(){ const tb=$('#matrixTable tbody'); tb.innerHTML=''; MATRIX.forEach((m,i)=>{ const tr=document.createElement('tr'); tr.innerHTML = `
+      <td><input value="${m.initiator}" data-f="initiator"/></td>
+      <td><input value="${m.hod}" data-f="hod"/></td>
+      <td>
+        <select data-f="department">
+          ${['Sales','Finance','Engineering','IT','HR','Admin'].map(d=>`<option ${d===m.department?'selected':''}>${d}</option>`).join('')}
+        </select>
+      </td>
+      <td><input value="${m.accountCode}" data-f="accountCode"/></td>
+      <td class="actions">
+        <button class="btn" data-save="${i}">💾 Save</button>
+        <button class="btn" data-editx="${i}">✏️ Details</button>
+        <button class="btn danger" data-del="${i}">🗑 Delete</button>
+      </td>`; tb.appendChild(tr); }); }
+function renderDeptCodes(){ const tb=$('#deptCodesTable tbody'); tb.innerHTML=''; Object.entries(DEPT_CODES).forEach(([dept, code])=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${dept}</td><td><input value="${code}" data-dept="${dept}" class="dcEdit"/></td><td><button class="btn" data-dcsave="${dept}">Save</button></td>`; tb.appendChild(tr); }); }
+function renderBudgets(){ const tb=$('#budgetsTable tbody'); tb.innerHTML=''; Object.keys(DEFAULT_DEPT_CODES).forEach(dept=>{ const amt = Number(BUDGETS[dept]||0); const tr=document.createElement('tr'); tr.innerHTML=`<td>${dept}</td><td><input type="number" min="0" step="0.01" value="${amt}" data-bd="${dept}"/></td><td><button class="btn" data-bdsave="${dept}">Save</button></td>`; tb.appendChild(tr); }); }
+function loadSettingsIntoUI(){ $('#setCompanyCode').value = SETTINGS.companyCode||'KSB'; $('#setCurrency').value = SETTINGS.currency||'ZMW'; $('#setPRPattern').value = SETTINGS.prPattern||'KSB-{DEPT}-{YYYY}{MM}-{SEQ4}'; $('#setSeqReset').value = SETTINGS.seqReset||'monthly'; $('#setFYStart').value = SETTINGS.fyStartMonth||1; }
+function loadOptionsIntoUI(){ $('#optCostCenter').checked = !!OPTIONS.costCenter; $('#optProjectCode').checked = !!OPTIONS.projectCode; $('#optDeliveryLocation').checked = !!OPTIONS.deliveryLocation; $('#optPaymentTerms').checked = !!OPTIONS.paymentTerms; applyOptionVisibility(); }
+function applyOptionVisibility(){ $('.optField.costCenter').classList.toggle('hidden', !OPTIONS.costCenter); $('.optField.projectCode').classList.toggle('hidden', !OPTIONS.projectCode); $('.optField.deliveryLocation').classList.toggle('hidden', !OPTIONS.deliveryLocation); $('.optField.paymentTerms').classList.toggle('hidden', !OPTIONS.paymentTerms); }
+
+// ===== View/PDF/Share =====
+function openViewModal(prId){ const r=REQS.find(x=>x.id===prId); if(!r) return; $('#modalTitle').textContent=`Requisition ${r.id}`; const itemsRows = r.items.map(it=>`<tr><td>${it.itemId||''}</td><td>${it.desc||''}</td><td>${it.qty}</td><td>${it.uom||''}</td><td style="text-align:right">${toMoney(it.unitPrice)}</td><td style="text-align:right">${toMoney(it.total)}</td></tr>`).join(''); const appr=r.approvals; const body = `
+    <div class="grid g-3">
+      <div><b>Initiator:</b> ${r.initiator}</div>
+      <div><b>Date:</b> ${r.date}</div>
+      <div><b>Department:</b> ${r.department}</div>
+      <div><b>Account Code:</b> ${r.accountCode}</div>
+      <div><b>HOD:</b> ${r.hod}</div>
+      <div><b>Vendor:</b> ${r.vendor||'-'}</div>
+    </div>
+    ${ (r.opt && (r.opt.costCenter||r.opt.projectCode||r.opt.deliveryLocation||r.opt.paymentTerms)) ? `<div class="divider"></div><div class="grid g-4">${ r.opt.costCenter?`<div><b>Cost Center:</b> ${r.opt.costCenter}</div>`:''}${ r.opt.projectCode?`<div><b>Project Code:</b> ${r.opt.projectCode}</div>`:''}${ r.opt.deliveryLocation?`<div><b>Delivery:</b> ${r.opt.deliveryLocation}</div>`:''}${ r.opt.paymentTerms?`<div><b>Terms:</b> ${r.opt.paymentTerms}</div>`:''}</div>`:'' }
+    <div class="divider"></div>
+    <table style="width:100%"><thead><tr><!-- <th>Item ID</th> --><th>Description</th><th>Qty</th><th>UoM</th><th>Unit Price</th><th>Total</th></tr></thead><tbody>${itemsRows}</tbody></table>
+    <div class="right" style="margin-top:8px"><b>Subtotal: ${toMoney(r.subtotal)}</b></div>
+    <div class="divider"></div>
+    <div><b>Justification</b><br/>${r.justification||'<span class="muted">—</span>'}</div>
+    <div class="divider"></div>
+    <div class="grid g-3">
+      <div><b>HOD:</b> <span class="status ${appr.hod}">${appr.hod.toUpperCase()}</span></div>
+      <div><b>Finance:</b> <span class="status ${appr.finance}">${appr.finance.toUpperCase()}</span></div>
+      <div><b>MD:</b> <span class="status ${appr.md}">${appr.md.toUpperCase()}</span></div>
+    </div>`; $('#modalBody').innerHTML = body; $('#viewModalBackdrop').style.display='flex'; $('#modalPdfBtn').onclick = ()=>downloadPDF(prId); $('#modalShareBtn').onclick = ()=>sharePR(prId); }
+$('#closeModalBtn').addEventListener('click', ()=> $('#viewModalBackdrop').style.display='none');
+
+async function downloadPDF(prId){ const r=REQS.find(x=>x.id===prId); if(!r) return; const wrapper=document.createElement('div'); wrapper.style.padding='16px'; wrapper.style.color='#000'; wrapper.innerHTML = `
+    <h2>Purchase Requisition ${r.id}</h2>
+    <div><b>Date:</b> ${r.date}</div>
+    <div><b>Initiator:</b> ${r.initiator}</div>
+    <div><b>Department:</b> ${r.department} — <b>Account:</b> ${r.accountCode}</div>
+    <div><b>HOD:</b> ${r.hod} — <b>Vendor:</b> ${r.vendor||'-'}</div>
+    <hr/>
+    ${$('#modalBody').querySelector('table').outerHTML}
+    <div style="text-align:right; margin-top:8px"><b>Subtotal: ${toMoney(r.subtotal)}</b></div>
+    <hr/>
+    <div><b>Justification:</b><br/>${r.justification||'-'}</div>
+    <hr/>
+    <div><b>Approvals:</b> HOD: ${r.approvals.hod} | Finance: ${r.approvals.finance} | MD: ${r.approvals.md}</div>`;
+  const canvas = await html2canvas(wrapper, { scale: 2 }); const imgData = canvas.toDataURL('image/png'); const { jsPDF } = window.jspdf; const pdf = new jsPDF('p','pt','a4'); const pageWidth = pdf.internal.pageSize.getWidth(); const imgWidth = pageWidth - 40; const imgHeight = canvas.height * imgWidth / canvas.width; pdf.addImage(imgData, 'PNG', 20, 20, imgWidth, imgHeight); pdf.save(`${r.id}.pdf`); toast('PDF downloaded.'); }
+async function sharePR(prId){ const r=REQS.find(x=>x.id===prId); if(!r) return; if(navigator.share){ try{ await navigator.share({ title:`Requisition ${r.id}`, text:`PR ${r.id} — ${r.department} — ${toMoney(r.subtotal)} — Status: ${overallStatus(r.approvals).toUpperCase()}`, }); toast('Shared successfully.'); }catch(e){} }else{ toast('Share API not supported on this device.'); } }
+
+// ===== Events =====
+$$('.tab-btn').forEach(btn=>{ btn.addEventListener('click', ()=>{ $$('.tab-btn').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); const tab=btn.dataset.tab; $$('main > section').forEach(s=>s.classList.remove('active')); $('#'+tab).classList.add('active'); if(tab==='pending') renderPending(); if(tab==='processed') renderProcessed(); if(tab==='admin') syncAdminState(); }); });
+
+// DOM Ready
+document.addEventListener('DOMContentLoaded', ()=>{
+  if (window.Notification && Notification.permission === 'default'){ Notification.requestPermission().catch(()=>{}); }
+  if(!MATRIX || !MATRIX.length){ MATRIX = DEFAULT_MATRIX; saveLS(LS_KEYS.MATRIX, MATRIX); }
+  populateInitiators(); $('#initiator').value = MATRIX[0]?.initiator || ''; applyMatrixForInitiator(); resetNewForm();
+  $('#initiator').addEventListener('change', applyMatrixForInitiator);
+  $('#department').addEventListener('change', ()=>{ updatePRNumberPreview(); });
+  $('#reqDate').addEventListener('change', ()=>{ updatePRNumberPreview(); });
+  $('#addItemBtn').addEventListener('click', ()=>addItemRow());
+
+  $('#submitBtn').addEventListener('click', ()=>{ const req=buildReqFromForm('pending'); const errs=validateReq(req); if(errs.length){ alert(errs.join('\n')); return; } if(REQS.some(r=>r.id===req.id)){ req.id = nextPRNumber(); $('#prNumber').value=req.id; }
+    REQS.push(req); saveLS(LS_KEYS.REQS, REQS); toast(`Requisition ${req.id} submitted.`); resetNewForm(); renderPending(); document.querySelector('[data-tab="pending"]').click(); });
+  $('#saveDraftBtn').addEventListener('click', ()=>{ const draft=buildReqFromForm('draft'); if(!draft.initiator || !draft.date){ alert('Initiator and Date are required for a draft.'); return; } draft.id = draft.id + '-D' + uid().slice(0,3); DRAFTS.push(draft); saveLS(LS_KEYS.DRAFTS, DRAFTS); toast(`Draft saved (${draft.id}).`); });
+  $('#loadDraftBtn').addEventListener('click', ()=>{ if(!DRAFTS.length){ alert('No drafts available.'); return; } const list=DRAFTS.map((d,i)=>`${i+1}. ${d.id} — ${d.initiator} — ${d.date}`).join('\n'); const pick=prompt('Select draft number to load:\n\n'+list+'\n\nEnter number:'); const idx=Number(pick)-1; if(Number.isNaN(idx)||idx<0||idx>=DRAFTS.length) return; const d=DRAFTS[idx]; $('#initiator').value=d.initiator; applyMatrixForInitiator(); $('#reqDate').value=d.date||todayISO(); $('#department').value=d.department||''; $('#accountCode').value=d.accountCode||''; $('#urgency').value=(d.urgency||'low')[0].toUpperCase()+ (d.urgency||'low').slice(1); $('#vendor').value=d.vendor||''; $('#justification').value=d.justification||''; $('#costCenter').value=d.opt?.costCenter||''; $('#projectCode').value=d.opt?.projectCode||''; $('#deliveryLocation').value=d.opt?.deliveryLocation||''; $('#paymentTerms').value=d.opt?.paymentTerms||''; const tb=$('#itemsTable tbody'); tb.innerHTML=''; (d.items||[]).forEach(addItemRow); if(!(d.items||[]).length) addItemRow(); updateTotals(); $('#prNumber').value = nextPRNumber(); toast(`Draft ${d.id} loaded into form.`); });
+
+  // Admin unlock
+  $('#unlockBtn').addEventListener('click', ()=>{ const pin=$('#adminPin').value.trim(); if(pin===ADMIN_PIN){ ADMIN_UNLOCKED=true; syncAdminState(); toast('Admin Console unlocked.'); } else { alert('Incorrect PIN.'); } });
+
+  // Settings saves
+  $('#saveSettingsBtn').addEventListener('click', ()=>{ SETTINGS.companyCode=$('#setCompanyCode').value.trim()||'KSB'; SETTINGS.currency=$('#setCurrency').value.trim()||'ZMW'; SETTINGS.prPattern=$('#setPRPattern').value.trim()||'KSB-{DEPT}-{YYYY}{MM}-{SEQ4}'; SETTINGS.seqReset=$('#setSeqReset').value; SETTINGS.fyStartMonth=Number($('#setFYStart').value)||1; saveLS(LS_KEYS.SETTINGS, SETTINGS); toast('Settings saved. New PR numbers will use updated pattern.'); updatePRNumberPreview(); });
+  $('#addDeptCodeBtn').addEventListener('click', ()=>{ const dept=$('#dcDept').value; const code=$('#dcCode').value.trim(); if(!code){ alert('Provide a department code.'); return; } DEPT_CODES[dept]=code; saveLS(LS_KEYS.DEPT_CODES, DEPT_CODES); renderDeptCodes(); toast('Department code saved.'); updatePRNumberPreview(); });
+  document.body.addEventListener('click', (e)=>{ const t=e.target; if(t.matches('[data-dcsave]')){ const dept=t.getAttribute('data-dcsave'); const inp=$(`input.dcEdit[data-dept="${dept}"]`); if(inp){ DEPT_CODES[dept]=inp.value.trim()||DEPT_CODES[dept]; saveLS(LS_KEYS.DEPT_CODES, DEPT_CODES); toast('Department code updated.'); updatePRNumberPreview(); } }
+    if(t.matches('[data-bdsave]')){ const dept=t.getAttribute('data-bdsave'); const inp=$(`input[data-bd="${dept}"]`); if(inp){ BUDGETS[dept]=Number(inp.value||0); saveLS(LS_KEYS.BUDGETS, BUDGETS); toast('Budget saved.'); } }
+  });
+  $('#addBudgetBtn').addEventListener('click', ()=>{ const dept=$('#bdDept').value; const amt=Number($('#bdAmt').value||0); BUDGETS[dept]=amt; saveLS(LS_KEYS.BUDGETS, BUDGETS); renderBudgets(); toast('Budget updated.'); });
+  $('#saveOptionsBtn').addEventListener('click', ()=>{ OPTIONS.costCenter=$('#optCostCenter').checked; OPTIONS.projectCode=$('#optProjectCode').checked; OPTIONS.deliveryLocation=$('#optDeliveryLocation').checked; OPTIONS.paymentTerms=$('#optPaymentTerms').checked; saveLS(LS_KEYS.OPTIONS, OPTIONS); applyOptionVisibility(); toast('Optional fields updated.'); });
+
+  // Matrix actions
+  document.body.addEventListener('click', (e)=>{ const t=e.target; if(t.matches('[data-save]')){ const i=Number(t.getAttribute('data-save')); const tr=t.closest('tr'); const inputs=tr.querySelectorAll('[data-f]'); inputs.forEach(inp=>{ const f=inp.getAttribute('data-f'); MATRIX[i][f]=inp.value; }); saveLS(LS_KEYS.MATRIX, MATRIX); populateInitiators(); toast('Mapping saved.'); }
+    if(t.matches('[data-del]')){ const i=Number(t.getAttribute('data-del')); if(confirm('Delete this mapping?')){ MATRIX.splice(i,1); saveLS(LS_KEYS.MATRIX, MATRIX); renderMatrix(); populateInitiators(); toast('Mapping deleted.'); } }
+    if(t.matches('[data-editx]')){ const i=Number(t.getAttribute('data-editx')); const m=MATRIX[i]; const employeeId = prompt('Employee ID for '+m.initiator+':', m.employeeId||'')||undefined; const email = prompt('Email for '+m.initiator+':', m.email||'')||undefined; const costCenter = prompt('Cost Center (optional):', m.costCenter||'')||undefined; Object.assign(MATRIX[i], { employeeId, email, costCenter }); saveLS(LS_KEYS.MATRIX, MATRIX); toast('Additional details saved.'); }
+  });
+
+  // Approvals handling
+  document.body.addEventListener('click', (e)=>{ const t=e.target; if(t.matches('[data-view]')) openViewModal(t.getAttribute('data-view')); if(t.matches('[data-pdf]')) downloadPDF(t.getAttribute('data-pdf')); if(t.matches('[data-approve]')) handleApproval(t.getAttribute('data-approve'), true); if(t.matches('[data-decline]')) handleApproval(t.getAttribute('data-decline'), false); });
+});
+
+function handleApproval(prId, approve){ const r=REQS.find(x=>x.id===prId); if(!r) return; const role=$('#currentRole').value; const stage=stageLabel(r.approvals); const canAct=(role===stage)||(role==='Admin'); if(!canAct){ alert(`Action not allowed. Current stage: ${stage||'n/a'}. Your role: ${role}`); return; }
+  // Budget guard at Finance stage
+  if(stage==='Finance' && approve){ const remaining = remainingBudgetFor(r.department, r.date); if(r.subtotal > remaining){ alert(`Finance approval blocked: ${r.department} remaining monthly budget is ${toMoney(remaining)} which is less than this PR total ${toMoney(r.subtotal)}.\n\nUpdate budgets in Admin → Settings.`); return; } }
+  const val = approve?'approved':'declined';
+  if(stage==='HOD') r.approvals.hod = val;
+  else if(stage==='Finance' && r.approvals.hod==='approved') r.approvals.finance = val;
+  else if(stage==='MD' && r.approvals.finance==='approved') r.approvals.md = val;
+  r.history.push({ at:new Date().toISOString(), by:role, event: approve?'approved':'declined' });
+  saveLS(LS_KEYS.REQS, REQS);
+  const st=overallStatus(r.approvals); if(st!=='pending'){ r.status = st; saveLS(LS_KEYS.REQS, REQS); }
+  toast(`${prId} ${approve?'approved':'declined'} at ${stage || 'N/A'} stage.`);
+  renderPending(); renderProcessed();
+}
+</script>
+
+<!-- === BEGIN PATCH v2: Hide Item ID/UoM + Pending Actions + PDF === -->
+<script>
+(function(){
+  'use strict';
+
+  // A) Ensure the Items table has an id so we can hide columns reliably
+  document.addEventListener('DOMContentLoaded', function(){
+    try{
+      // Find the first table whose header contains "Item ID" and/or "Unit of Measure"
+      var tables = document.querySelectorAll('table');
+      tables.forEach(function(t){
+        var ths = Array.from(t.querySelectorAll('thead th'));
+        var hasItemsHeader = ths.some(function(th){ return /\bItem\s*ID\b/i.test(th.textContent||''); }) ||
+                             ths.some(function(th){ return /\bUnit\s*of\s*Measure\b/i.test(th.textContent||''); });
+        if (hasItemsHeader && !t.id){ t.id = 'itemsTable'; }
+      });
+      // Inject CSS to hide col 1 (Item ID) and col 4 (UoM)
+      var css = document.createElement('style');
+      css.setAttribute('data-patch','hide-itemid-uom');
+      css.textContent = "#itemsTable th:nth-child(1), #itemsTable td:nth-child(1), #itemsTable th:nth-child(4), #itemsTable td:nth-child(4){display:none !important;}";
+      document.head.appendChild(css);
+    }catch(e){}
+  });
+
+  // B) Helpers (define only if missing)
+  function _overallStatus(appr){
+    if (!appr) return 'pending';
+    if (appr.hod === 'declined' || appr.finance === 'declined' || appr.md === 'declined') return 'declined';
+    if (appr.hod === 'approved' && appr.finance === 'approved' && appr.md === 'approved') return 'approved';
+    return 'pending';
+  }
+  if (typeof window.overallStatus !== 'function') window.overallStatus = _overallStatus;
+  if (typeof window.toMoney !== 'function') window.toMoney = function(n){ return 'ZMW ' + Number(n||0).toFixed(2); };
+
+  // C) Render Pending Approvals rows with Approve / Decline / PDF buttons (wrapper)
+  var _prevRenderPending = window.renderPending;
+  window.renderPending = function(){
+    try{
+      if (typeof _prevRenderPending === 'function') _prevRenderPending();
+
+      var tb = document.querySelector('#pendingTable tbody');
+      // If there is no tbody or REQS list, quietly exit
+      if (!tb || !Array.isArray(window.REQS)) return;
+
+      // Clear and rebuild to guarantee actions exist
+      tb.innerHTML = '';
+      var pending = window.REQS.filter(function(r){ return window.overallStatus(r.approvals) === 'pending' && r.status !== 'draft'; });
+      if (!pending.length){
+        tb.innerHTML = '<tr><td colspan="6" class="muted">No pending requisitions.</td></tr>';
+        return;
+      }
+
+      var roleSel = document.getElementById('currentRole');
+      var role = roleSel ? roleSel.value : 'Initiator';
+
+      pending.forEach(function(r){
+        var stage = (typeof window.stageLabel === 'function') ? window.stageLabel(r.approvals) : null;
+        var canAct = (role === stage) || (role === 'Admin');
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>'+r.id+'</td>'+
+                       '<td>'+r.initiator+'</td>'+
+                       '<td>'+r.department+'</td>'+
+                       '<td>'+window.toMoney(r.subtotal)+'</td>'+
+                       '<td>Pending ('+(stage||'—')+')</td>'+
+                       '<td>'+
+                         '<button class="btn" data-view="'+r.id+'">👁 View</button>\n'+
+                         '<button class="btn" data-approve="'+r.id+'" ' + (canAct?'':'disabled') + '>✅ Approve</button>\n'+
+                         '<button class="btn danger" data-decline="'+r.id+'" ' + (canAct?'':'disabled') + '>⛔ Decline</button>\n'+
+                         '<button class="btn info" data-pdf="'+r.id+'">⬇️ PDF</button>'+
+                       '</td>';
+        tb.appendChild(tr);
+      });
+    }catch(e){ if (typeof _prevRenderPending === 'function') return _prevRenderPending(); }
+  };
+
+  // D) Render Processed Reqs (wrapper) so approved/declined move there
+  var _prevRenderProcessed = window.renderProcessed;
+  window.renderProcessed = function(){
+    try{
+      if (!Array.isArray(window.REQS)) { if (typeof _prevRenderProcessed === 'function') _prevRenderProcessed(); return; }
+      var tb = document.querySelector('#processedTable tbody');
+      if (!tb) { if (typeof _prevRenderProcessed === 'function') _prevRenderProcessed(); return; }
+      tb.innerHTML = '';
+      var processed = window.REQS.filter(function(r){ return ['approved','declined'].includes(window.overallStatus(r.approvals)) && r.status !== 'draft'; });
+      if (!processed.length){ tb.innerHTML = '<tr><td colspan="6" class="muted">No processed requisitions.</td></tr>'; return; }
+      processed.forEach(function(r){
+        var st = window.overallStatus(r.approvals).toUpperCase();
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td>'+r.id+'</td>'+
+                       '<td>'+r.initiator+'</td>'+
+                       '<td>'+r.department+'</td>'+
+                       '<td>'+window.toMoney(r.subtotal)+'</td>'+
+                       '<td>'+st+'</td>'+
+                       '<td><button class="btn" data-view="'+r.id+'">👁 View</button> <button class="btn info" data-pdf="'+r.id+'">⬇️ PDF</button></td>';
+        tb.appendChild(tr);
+      });
+    }catch(e){ if (typeof _prevRenderProcessed === 'function') return _prevRenderProcessed(); }
+  };
+
+  // E) Ensure handleApproval sets status and refreshes Processed
+  var _prevHandle = window.handleApproval;
+  window.handleApproval = function(prId, approve){
+    if (typeof _prevHandle === 'function') _prevHandle(prId, approve);
+    try{
+      var r = Array.isArray(window.REQS) ? window.REQS.find(function(x){ return x && x.id === prId; }) : null;
+      if (r){
+        var st = window.overallStatus(r.approvals);
+        if (st !== 'pending') r.status = st;
+        if (window.LS_KEYS && typeof window.saveLS === 'function') saveLS(LS_KEYS.REQS, window.REQS);
+      }
+      if (typeof window.renderPending === 'function') window.renderPending();
+      if (typeof window.renderProcessed === 'function') window.renderProcessed();
+    }catch(e){}
+  };
+
+  // F) Provide a simple PDF download if none exists
+  if (typeof window.downloadPDF !== 'function'){
+    window.downloadPDF = function(prId){
+      try{
+        var r = Array.isArray(window.REQS) ? window.REQS.find(function(x){ return x && x.id === prId; }) : null;
+        if (!r){ alert('PR not found.'); return; }
+        var w = window.open('', '_blank');
+        if (!w){ alert('Pop-up blocked. Please allow pop-ups to generate PDF.'); return; }
+        w.document.write('<html><head><title>'+r.id+'</title>
+<script>
+  (function() {
+    const requiredPin = "8888";
+    const storedPin = sessionStorage.getItem("pin");
+
+    if (storedPin !== requiredPin) {
+      let userPin = prompt("Enter PIN to access the app:");
+      if (userPin !== requiredPin) {
+        alert("Incorrect PIN. Access denied.");
+        window.location.reload();
+      } else {
+        sessionStorage.setItem("pin", userPin);
+      }
+    }
+  })();
+</script>
+
+</head><body>');
+        w.document.write('<h2>Purchase Requisition '+r.id+'</h2>');
+        w.document.write('<div><b>Date:</b> '+(r.date||'')+'</div>');
+        w.document.write('<div><b>Initiator:</b> '+(r.initiator||'')+'</div>');
+        w.document.write('<div><b>Department:</b> '+(r.department||'')+'</div>');
+        w.document.write('<div><b>Account Code:</b> '+(r.accountCode||'')+'</div>');
+        w.document.write('<hr/>');
+        w.document.write('<div><b>Subtotal:</b> '+window.toMoney(r.subtotal||0)+'</div>');
+        w.document.write('<hr/>');
+        w.document.write('<div><b>Status:</b> '+window.overallStatus(r.approvals).toUpperCase()+'</div>');
+        w.document.write('</body></html>');
+        w.document.close();
+        w.focus();
+        w.print(); // user can save to PDF from print dialog
+      }catch(e){ alert('Unable to generate PDF in this environment.'); }
+    };
+  }
+
+  // G) Event delegation for Approve / Decline / PDF buttons
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if (t.matches('[data-approve]')) window.handleApproval(t.getAttribute('data-approve'), true);
+    if (t.matches('[data-decline]')) window.handleApproval(t.getAttribute('data-decline'), false);
+    if (t.matches('[data-pdf]')) window.downloadPDF(t.getAttribute('data-pdf'));
+  });
+})();
+</script>
+<!-- === END PATCH v2 === -->
+
+</body>
+</html>
