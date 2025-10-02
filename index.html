@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="KSB Purchase Management System">
+    <meta name="theme-color" content="#0077B6">
+    <title>KSB Purchase Management System</title>
+    <link rel="manifest" href="manifest.json">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script defer src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <style>
+        :root {
+            --primary-blue: #03045E;
+            --secondary-blue: #0077B6;
+            --accent-blue: #00B4D8;
+            --dark-grey: #3E3E4D;
+            --medium-grey: #4F4E5E;
+            --light-grey: #7D7981;
+            --lighter-grey: #9896AA;
+        }
+        
+        body { 
+            font-family: 'Calibri Light', 'Calibri', 'Segoe UI', sans-serif;
+            font-weight: 300;
+            background-color: #f5f7fa;
+            color: var(--dark-grey);
+        }
+        
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(180deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            color: white;
+            padding: 20px;
+        }
+        
+        .nav-link {
+            color: rgba(255,255,255,0.85);
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            transition: all 0.3s;
+        }
+        
+        .nav-link:hover {
+            background-color: rgba(255,255,255,0.15);
+            color: white;
+            transform: translateX(5px);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(3,4,94,0.08);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, var(--secondary-blue) 0%, var(--accent-blue) 100%);
+            color: white;
+            font-weight: 600;
+            border-radius: 12px 12px 0 0 !important;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--secondary-blue) 0%, var(--accent-blue) 100%);
+            border: none;
+        }
+        
+        .table thead th {
+            background-color: var(--primary-blue);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+        }
+        
+        .hidden { display: none !important; }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+        }
+        
+        .badge-pending { background-color: #ffc107; color: #000; }
+        .badge-approved { background-color: #28a745; }
+        .badge-rejected { background-color: #dc3545; }
+        .badge-draft { background-color: var(--light-grey); }
+        
+        .stat-card {
+            transition: transform 0.2s;
+            border-radius: 12px;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        #itemsTable textarea.form-control {
+            min-height: 50px;
+        }
+        
+        .progress {
+            border-radius: 8px;
+            height: 25px;
+        }
+        
+        .theme-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, var(--secondary-blue) 0%, var(--accent-blue) 100%);
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,119,182,0.4);
+        }
+    </style>
+</head>
+<body>
+
+<button class="theme-toggle" onclick="alert('Theme toggle coming soon')">🌙</button>
+
+<div id="loadingScreen" class="loading">
+    <div class="spinner-border text-primary"></div>
+    <p class="mt-3">Initializing system...</p>
+</div>
+
+<div id="loginScreen" class="hidden">
+    <div class="login-container">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="text-center mb-4">KSB Purchase System</h2>
+                <div id="loginAlert"></div>
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-control" id="loginUsername" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-control" id="loginPassword" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="appScreen" class="hidden">
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 sidebar">
+                <h4>KSB Purchase</h4>
+                <hr style="border-color: rgba(255,255,255,0.2)">
+                <ul class="nav flex-column">
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="showDashboard()">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="showCreateReq()">New Requisition</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" onclick="showMyReqs()">My Requisitions</a></li>
+                    <li class="nav-item" id="menuPendingApprovals"><a class="nav-link" href="#" onclick="showPendingApprovals()">Pending Approvals</a></li>
+                    <li class="nav-item" id="menuBudgets"><a class="nav-link" href="#" onclick="showBudgets()">Budgets</a></li>
+                    <li class="nav-item mt-3"><a class="nav-link text-danger" href="#" onclick="logout()">Logout</a></li>
+                </ul>
+                <hr style="border-color: rgba(255,255,255,0.2)">
+                <p class="small"><span id="currentUserDisplay"></span><br><span id="currentDeptDisplay"></span></p>
+            </nav>
+            
+            <main class="col-md-10 px-4 py-3">
+                <div id="alertContainer"></div>
+                <div id="mainContent">
+                    <h1>Loading...</h1>
+                </div>
+            </main>
+        </div>
+    </div>
+</div>
+
+<script>
+// Wait for Firebase to load
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(initializeApp, 500);
+});
+
+let db, auth, currentUser, allUsers = {}, requisitions = [], departments = [], vendors = [];
+let itemRowCounter = 0;
+
+function initializeApp() {
+    if (typeof firebase === 'undefined') {
+        setTimeout(initializeApp, 500);
+        return;
+    }
+    
+    const firebaseConfig = {
+        apiKey: "AIzaSyCfVjDz3mpviaTm3CZXEaOyTsF-bSmsQR8",
+        authDomain: "ksb-purchase.firebaseapp.com",
+        databaseURL: "https://ksb-purchase-default-rtdb.firebaseio.com",
+        projectId: "ksb-purchase",
+        storageBucket: "ksb-purchase.firebasestorage.app",
+        messagingSenderId: "460491548603",
+        appId: "1:460491548603:web:794b0f3b0480d3ad42469e"
+    };
+    
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.database();
+    
+    initializeDefaultData();
+}
+
+async function initializeDefaultData() {
+    try {
+        const usersSnapshot = await db.ref('users').once('value');
+        
+        if (!usersSnapshot.exists()) {
+            console.log('Initializing default data...');
+            
+            const defaultUsers = {
+                'admin': { name: 'System Admin', email: 'admin@ksb.com', role: 'admin', department: 'Admin', hod: null },
+                'kndhlovu': { name: 'Ndhlovu, Kanyembo', email: 'kndhlovu@ksb.com', role: 'md', department: 'Executive', hod: null },
+                'Hmbunda': { name: 'Mbunda, Haggai', email: 'hmbunda@ksb.com', role: 'hod', department: 'IT', hod: null },
+                'abanda': { name: 'Banda, Anne', email: 'abanda@ksb.com', role: 'finance_manager', department: 'Finance', hod: null },
+                'jmunthali': { name: 'Munthali, Joe', email: 'jmunthali@ksb.com', role: 'hod', department: 'Engineering', hod: null },
+                'mshebele': { name: 'Shebele, Moses', email: 'mshebele@ksb.com', role: 'hod', department: 'Sales', hod: null },
+                'ananyangwe': { name: 'Nanyangwe, Annie', email: 'ananyangwe@ksb.com', role: 'initiator', department: 'Finance', hod: 'abanda' },
+                'nnguni': { name: 'Nguni, Nashon', email: 'nnguni@ksb.com', role: 'initiator', department: 'Finance', hod: 'abanda' },
+                'jchabala': { name: 'Chabala, John', email: 'jchabala@ksb.com', role: 'initiator', department: 'Engineering', hod: 'jmunthali' },
+                'jkaluya': { name: 'Kaluya, Justine', email: 'jkaluya@ksb.com', role: 'initiator', department: 'Engineering', hod: 'jmunthali' },
+                'wchishimba': { name: 'Chishimba, Waden', email: 'wchishimba@ksb.com', role: 'initiator', department: 'Sales', hod: 'mshebele' },
+                'lzimba': { name: 'Zimba, Lina', email: 'lzimba@ksb.com', role: 'initiator', department: 'Sales', hod: 'mshebele' },
+                'lmwambazi': { name: 'Mwambazi, Larry', email: 'lmwambazi@ksb.com', role: 'hod', department: 'Engineering', hod: null }
+            };
+            
+            await db.ref('users').set(defaultUsers);
+            
+            const defaultDepts = [
+                { name: 'Engineering', accountCode: 'ENG003', budget: 100000 },
+                { name: 'Finance', accountCode: 'FIN002', budget: 75000 },
+                { name: 'Sales', accountCode: 'SLM001', budget: 80000 },
+                { name: 'IT', accountCode: 'IT004', budget: 60000 },
+                { name: 'HR', accountCode: 'HR005', budget: 50000 }
+            ];
+            
+            await db.ref('departments').set(defaultDepts);
+            
+            const defaultVendors = ['Bearing Man Group (BMG)', 'BOLLORE Logistics', 'Computer King', 'Game Stores Zambia'];
+            await db.ref('vendors').set(defaultVendors);
+            
+            for (const [username, userData] of Object.entries(defaultUsers)) {
+                try {
+                    const pwd = username === 'admin' ? 'admin123' : 'pass123';
+                    await auth.createUserWithEmailAndPassword(userData.email, pwd);
+                } catch (e) {
+                    console.log(`Account exists: ${username}`);
+                }
+            }
+        }
+        
+        document.getElementById('loadingScreen').classList.add('hidden');
+        document.getElementById('loginScreen').classList.remove('hidden');
+        
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showAlert('Error initializing system', 'danger');
+    }
+}
+
+function showAlert(message, type = 'success') {
+    const alert = `<div class="alert alert-${type} alert-dismissible fade show">${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>`;
+    const container = document.getElementById('alertContainer');
+    container.innerHTML = alert;
+    setTimeout(() => container.innerHTML = '', 3000);
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    
+    try {
+        const usersSnapshot = await db.ref('users').once('value');
+        allUsers = usersSnapshot.val() || {};
+        
+        const userData = allUsers[username];
+        if (!userData) {
+            showAlert('User not found', 'danger');
+            return;
+        }
+        
+        await auth.signInWithEmailAndPassword(userData.email, password);
+        
+        currentUser = { username, ...userData };
+        
+        const deptsSnapshot = await db.ref('departments').once('value');
+        departments = deptsSnapshot.val() || [];
+        
+        const vendorsSnapshot = await db.ref('vendors').once('value');
+        vendors = vendorsSnapshot.val() || [];
+        
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('appScreen').classList.remove('hidden');
+        document.getElementById('currentUserDisplay').textContent = userData.name;
+        document.getElementById('currentDeptDisplay').textContent = userData.department;
+        
+        setupMenuVisibility();
+        loadDashboard();
+        
+    } catch (error) {
+        console.error('Login error:', error);
+        const alertDiv = document.getElementById('loginAlert');
+        alertDiv.innerHTML = '<div class="alert alert-danger">Invalid credentials</div>';
+    }
+});
+
+function setupMenuVisibility() {
+    const showBudgets = ['admin', 'finance_manager', 'md', 'hod'].includes(currentUser.role);
+    document.getElementById('menuBudgets').classList.toggle('hidden', !showBudgets);
+}
+
+function logout() {
+    auth.signOut();
+    currentUser = null;
+    document.getElementById('appScreen').classList.add('hidden');
+    document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+async function loadDashboard() {
+    const reqsSnapshot = await db.ref('requisitions').once('value');
+    const reqs = reqsSnapshot.val() || {};
+    requisitions = Object.values(reqs);
+    
+    let myReqs = [];
+    if (currentUser.role === 'admin' || currentUser.role === 'finance_manager' || currentUser.role === 'md') {
+        myReqs = requisitions;
+    } else if (currentUser.role === 'hod') {
+        myReqs = requisitions.filter(r => r.department === currentUser.department || r.currentApprover === currentUser.username);
+    } else {
+        myReqs = requisitions.filter(r => r.createdBy === currentUser.username);
+    }
+    
+    const html = `
+        <h1>Dashboard</h1>
+        <div class="row mt-4 g-3">
+            <div class="col-md-3">
+                <div class="card text-white stat-card" style="background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);">
+                    <div class="card-body text-center py-3">
+                        <h6>Pending</h6>
+                        <p class="display-6 mb-0">${myReqs.filter(r => r.status === 'PENDING').length}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white stat-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                    <div class="card-body text-center py-3">
+                        <h6>Approved</h6>
+                        <p class="display-6 mb-0">${myReqs.filter(r => r.status === 'APPROVED').length}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white stat-card" style="background: linear-gradient(135deg, #dc3545 0%, #e63946 100%);">
+                    <div class="card-body text-center py-3">
+                        <h6>Rejected</h6>
+                        <p class="display-6 mb-0">${myReqs.filter(r => r.status === 'REJECTED').length}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-white stat-card" style="background: linear-gradient(135deg, var(--secondary-blue) 0%, var(--accent-blue) 100%);">
+                    <div class="card-body text-center py-3">
+                        <h6>Drafts</h6>
+                        <p class="display-6 mb-0">${myReqs.filter(r => r.status === 'DRAFT').length}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card mt-4">
+            <div class="card-header"><h5>Recent Requisitions</h5></div>
+            <div class="card-body">
+                ${myReqs.length === 0 ? '<p>No requisitions. <a href="#" onclick="showCreateReq()">Create one</a></p>' :
+                '<table class="table"><thead><tr><th>Req #</th><th>Description</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>' +
+                myReqs.slice(-5).reverse().map(req => `
+                    <tr>
+                        <td>${req.number}</td>
+                        <td>${req.description.substring(0,40)}...</td>
+                        <td>ZMW ${req.totalCost.toFixed(2)}</td>
+                        <td><span class="badge badge-${req.status.toLowerCase()}">${req.status}</span></td>
+                        <td>${new Date(req.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                `).join('') + '</tbody></table>'}
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('mainContent').innerHTML = html;
+}
+
+function showDashboard() {
+    loadDashboard();
+}
+
+function showCreateReq() {
+    const dept = departments.find(d => d.name === currentUser.department);
+    const spent = requisitions.filter(r => r.department === currentUser.department && r.status === 'APPROVED').reduce((s,r) => s + r.totalCost, 0);
+    const available = dept ? dept.budget - spent : 0;
+    const pct = dept && dept.budget > 0 ? ((spent / dept.budget) * 100).toFixed(1) : 0;
+    
+    let budgetAlert = '';
+    if (currentUser.role === 'initiator' && dept) {
+        if (pct >= 100) {
+            budgetAlert = `<div class="alert alert-danger"><strong>⚠️ Budget Exceeded!</strong> Dept: ${dept.name} | Budget: ZMW ${dept.budget.toFixed(2)} | Available: ZMW ${available.toFixed(2)}</div>`;
+        } else if (pct >= 80) {
+            budgetAlert = `<div class="alert alert-warning"><strong>⚠️ Budget Alert!</strong> ${pct}% consumed | Available: ZMW ${available.toFixed(2)}</div>`;
+        } else {
+            budgetAlert = `<div class="alert alert-info"><strong>Budget:</strong> ${pct}% used | Available: ZMW ${available.toFixed(2)}</div>`;
+        }
+    }
+    
+    const html = `
+        <h1>Create New Requisition</h1>
+        <div class="card mt-4">
+            <div class="card-body">
+                ${budgetAlert}
+                <form id="reqForm">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label>Department</label>
+                            <input type="text" class="form-control" value="${currentUser.department}" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Account Code</label>
+                            <input type="text" class="form-control" value="${dept ? dept.accountCode : ''}" readonly>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label>Vendor</label>
+                        <select class="form-control" id="reqVendor" required>
+                            <option value="">Select Vendor</option>
+                            ${vendors.map(v => `<option value="${v}">${v}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between">
+                            <label><strong>Items to Purchase</strong></label>
+                            <button type="button" class="btn btn-sm btn-success" onclick="addItemRow()">+ Add Item</button>
+                        </div>
+                        <table class="table table-bordered mt-2" id="itemsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Description</th>
+                                    <th>Qty</th>
+                                    <th>Unit Cost</th>
+                                    <th>Total</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="itemsTableBody"></tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="4" class="text-end"><strong>Grand Total:</strong></td>
+                                    <td colspan="2"><strong id="grandTotal">ZMW 0.00</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <div class="mb-3">
+                        <label>Justification</label>
+                        <textarea class="form-control" id="reqJust" rows="2" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                    <button type="button" class="btn btn-secondary" onclick="loadDashboard()">Cancel</button>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('mainContent').innerHTML = html;
+    itemRowCounter = 0;
+    addItemRow();
+    
+    document.getElementById('reqForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const items = [];
+        const rows = document.querySelectorAll('#itemsTableBody tr');
+        rows.forEach(row => {
+            const desc = row.querySelector('.item-description').value.trim();
+            const qty = parseInt(row.querySelector('.item-quantity').value);
+            const cost = parseFloat(row.querySelector('.item-unit-cost').value);
+            if (desc && qty && cost) {
+                items.push({ description: desc, quantity: qty, unitCost: cost, total: qty * cost });
+            }
+        });
+        
+        if (items.length === 0) {
+            showAlert('Add at least one item', 'warning');
+            return;
+        }
+        
+        const totalCost = items.reduce((s, i) => s + i.total, 0);
+        const hodUser = allUsers[currentUser.hod];
+        const financeManager = Object.values(allUsers).find(u => u.role === 'finance_manager');
+        const md = Object.values(allUsers).find(u => u.role === 'md');
+        
+        const nameParts = currentUser.name.split(/[\s,]+/).filter(p => p);
+        const initials = nameParts.length >= 2 ? nameParts[0][0] + nameParts[nameParts.length-1][0] : nameParts[0].substring(0,2);
+        const timestamp = Date.now();
+        
+        const requisition = {
+            id: timestamp,
+            number: `KSB-${currentUser.department.substring(0,3).toUpperCase()}-${initials.toUpperCase()}-${timestamp}`,
+            createdBy: currentUser.username,
+            creatorName: currentUser.name,
+            department: currentUser.department,
+            accountCode: dept ? dept.accountCode : '',
+            vendor: document.getElementById('reqVendor').value,
+            items: items,
+            description: items.length === 1 ? items[0].description : `${items.length} items: ${items[0].description}, ...`,
+            totalCost: totalCost,
+            justification: document.getElementById('reqJust').value,
+            status: 'PENDING',
+            approvalStage: 'HOD',
+            currentApprover: hodUser ? currentUser.hod : null,
+            currentApproverName: hodUser ? hodUser.name : null,
+            hodApprover: hodUser ? currentUser.hod : null,
+            financeApprover: financeManager ? Object.keys(allUsers).find(k => allUsers[k] === financeManager) : null,
+            mdApprover: md ? Object.keys(allUsers).find(k => allUsers[k] === md) : null,
+            createdAt: new Date().toISOString()
+        };
+        
+        await db.ref('requisitions/' + requisition.id).set(requisition);
+        showAlert('Requisition submitted!');
+        loadDashboard();
+    });
+}
+
+function addItemRow() {
+    const tbody = document.getElementById('itemsTableBody');
+    const rowCount = tbody ? tbody.querySelectorAll('tr').length : 0;
+    
+    if (rowCount >= 30) {
+        showAlert('Maximum 30 items', 'warning');
+        return;
+    }
+    
+    itemRowCounter++;
+    const rowId = `item-row-${itemRowCounter}`;
+    const row = document.createElement('tr');
+    row.id = rowId;
+    row.innerHTML = `
+        <td>${rowCount + 1}</td>
+        <td><textarea class="form-control item-description" rows="2" required></textarea></td>
+        <td><input type="number" class="form-control item-quantity" min="1" value="1" required></td>
+        <td><input type="number" class="form-control item-unit-cost" step="0.01" min="0" required></td>
+        <td><input type="text" class="form-control item-total" value="ZMW 0.00" readonly></td>
+        <td><button type="button" class="btn btn-sm btn-danger" onclick="removeItemRow('${rowId}')">Remove</button></td>
+    `;
+    tbody.appendChild(row);
+    
+    row.querySelector('.item-quantity').addEventListener('input', () => calculateItemTotal(rowId));
+    row.querySelector('.item-unit-cost').addEventListener('input', () => calculateItemTotal(rowId));
+}
+
+function removeItemRow(rowId) {
+    const row = document.getElementById(rowId);
+    if (row) {
+        const tbody = document.getElementById('itemsTableBody');
+        if (tbody.querySelectorAll('tr').length <= 1) {
+            showAlert('Need at least one item', 'warning');
+            return;
+        }
+        row.remove();
+        updateItemNumbers();
+        calculateGrandTotal();
+    }
+}
+
+function updateItemNumbers() {
+    const rows = document.querySelectorAll('#itemsTableBody tr');
+    rows.forEach((row, i) => {
+        row.querySelector('td:first-child').textContent = i + 1;
+    });
+}
+
+function calculateItemTotal(rowId) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    const qty = parseFloat(row.querySelector('.item-quantity').value) || 0;
+    const cost = parseFloat(row.querySelector('.item-unit-cost').value) || 0;
+    row.querySelector('.item-total').value = 'ZMW ' + (qty * cost).toFixed(2);
+    calculateGrandTotal();
+}
+
+function calculateGrandTotal() {
+    const rows = document.querySelectorAll('#itemsTableBody tr');
+    let total = 0;
+    rows.forEach(row => {
+        const qty = parseFloat(row.querySelector('.item-quantity').value) || 0;
+        const cost = parseFloat(row.querySelector('.item-unit-cost').value) || 0;
+        total += qty * cost;
+    });
+    const el = document.getElementById('grandTotal');
+    if (el) el.textContent = 'ZMW ' + total.toFixed(2);
+}
+
+function showMyReqs() {
+    const html = `
+        <h1>My Requisitions</h1>
+        <div class="card mt-
